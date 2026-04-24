@@ -1,14 +1,6 @@
-<<<<<<< HEAD
 streamlit
 pandas
 scikit-learn
 joblib
 openpyxl
-=======
-streamlit
-pandas
-scikit-learn
-joblib
-openpyxl
->>>>>>> 10de381c2ccf77cf9a1f9b3cfaf824b59cc7de50
 shap
