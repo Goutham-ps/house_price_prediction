@@ -218,7 +218,7 @@ if st.button("Predict"):
     # Table
     st.markdown("### 📊 Detailed Impact")
     st.dataframe(shap_df.head(8), hide_index=True, use_container_width=True)
-
+                        
     # Chart
     st.markdown("### 📈 Feature Impact")
     st.bar_chart(shap_df.head(8).set_index("Feature")["Impact"])
