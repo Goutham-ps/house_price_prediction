@@ -203,49 +203,6 @@ with tab1:
 
         st.markdown("### 📊 Feature Impact")
         st.bar_chart(shap_df.head(8).set_index("Feature")["Impact"])
-        st.markdown("---")
-st.subheader("📂 Bulk Prediction (Upload CSV)")
-
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
-
-if uploaded_file is not None:
-    try:
-        input_df = pd.read_csv(uploaded_file)
-
-        st.write("### 📊 Uploaded Data")
-        st.dataframe(input_df.head(), use_container_width=True)
-
-        # Preprocess input
-        input_df['bhk_per_size'] = input_df['bhk'] / input_df['size']
-        input_df['total_space_per_room'] = input_df['size'] / input_df['rooms']
-
-        # One-hot encoding alignment
-        input_encoded = pd.get_dummies(input_df)
-
-        # Align with training columns
-        input_encoded = input_encoded.reindex(columns=feature_columns, fill_value=0)
-
-        # Predict
-        predictions = model.predict(input_encoded)
-        input_df['Predicted Price'] = predictions
-
-        st.success("✅ Predictions completed!")
-
-        st.write("### 💰 Results")
-        st.dataframe(input_df, use_container_width=True)
-
-        # Download button
-        csv = input_df.to_csv(index=False).encode('utf-8')
-
-        st.download_button(
-            label="📥 Download Predictions",
-            data=csv,
-            file_name="predictions.csv",
-            mime="text/csv"
-        )
-
-    except Exception as e:
-        st.error(f"❌ Error: {e}")
 
 # ============================
 # 📊 TAB 2: DATA
