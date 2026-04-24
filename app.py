@@ -2,22 +2,43 @@ import streamlit as st
 import pandas as pd
 import joblib
 import shap
-from sklearn.ensemble import HistGradientBoostingRegressor
+import numpy as np
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
 # ----------------------------
 # ⚙️ PAGE CONFIG
 # ----------------------------
-st.set_page_config(page_title="House Price Predictor", layout="centered")
+st.set_page_config(page_title="House Price Predictor", layout="wide")
 
 st.title("🏠 House Price Predictor")
-st.markdown("Enter house details to estimate price using AI")
+st.markdown("### 🧠 AI-powered Real Estate Price Prediction")
 
 # ----------------------------
-# 📂 LOAD DATA
+# 🚀 CACHING
 # ----------------------------
-df = pd.read_excel("House_Data.xlsx")
+@st.cache_data
+def load_data():
+    return pd.read_excel("House_Data.xlsx")
+
+@st.cache_resource
+def load_model():
+    model = joblib.load("house_model.pkl")
+    columns = joblib.load("columns.pkl")
+    return model, columns
+
+@st.cache_resource
+def get_explainer(_model):
+    return shap.Explainer(_model)
+
+# ----------------------------
+# 📂 LOAD
+# ----------------------------
+df = load_data()
+model, feature_columns = load_model()
+explainer = get_explainer(model)
+
+st.success("✅ Model loaded successfully")
 
 # ----------------------------
 # 🧹 DATA CLEANING
@@ -38,20 +59,15 @@ def convert_size(x):
         return None
 
 df['size'] = df['size'].apply(convert_size)
-
-# Remove outliers
 df = df[df['size'] < df['size'].quantile(0.99)]
 
-# Fix bhk
 df['bhk'] = df['bhk'].astype(str).str.extract(r'(\d+)')
 df['bhk'] = pd.to_numeric(df['bhk'], errors='coerce')
-
 df['rooms'] = pd.to_numeric(df['rooms'], errors='coerce')
 df['price'] = pd.to_numeric(df['price'], errors='coerce')
 
 df = df.dropna(subset=['size', 'bhk', 'rooms', 'location', 'price'])
 
-# Feature engineering
 df['bhk_per_size'] = df['bhk'] / df['size']
 df['total_space_per_room'] = df['size'] / df['rooms']
 
@@ -64,48 +80,14 @@ df['location'] = df['location'].apply(
     lambda x: x if location_counts[x] > 30 else 'other'
 )
 
-# ----------------------------
-# ENCODING
-# ----------------------------
 df = pd.get_dummies(df, columns=['location', 'area_type'])
 
 # ----------------------------
-# MODEL
+# MODEL ACCURACY
 # ----------------------------
 X = df.drop('price', axis=1)
 y = df['price']
 
-feature_columns = X.columns.tolist()
-
-try:
-    model = joblib.load("house_model.pkl")
-    feature_columns = joblib.load("columns.pkl")
-    st.success("✅ Model loaded successfully")
-
-except:
-    st.warning("⚙️ Training model for first time...")
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-
-    model = HistGradientBoostingRegressor(
-        max_depth=10,
-        learning_rate=0.05,
-        max_iter=400,
-        min_samples_leaf=10
-    )
-
-    model.fit(X_train, y_train)
-
-    joblib.dump(model, "house_model.pkl")
-    joblib.dump(feature_columns, "columns.pkl")
-
-    st.success("💾 Model saved!")
-
-# ----------------------------
-# ACCURACY
-# ----------------------------
 X = X.reindex(columns=feature_columns, fill_value=0)
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -115,121 +97,188 @@ X_train, X_test, y_train, y_test = train_test_split(
 preds = model.predict(X_test)
 score = r2_score(y_test, preds)
 
-st.write(f"📊 Model Accuracy (R²): {score:.2f}")
-
 # ----------------------------
-# INPUT
+# 🧭 TABS
 # ----------------------------
-st.sidebar.header("🔧 Input Parameters")
+tab1, tab2, tab3 = st.tabs(["🏠 Prediction", "📊 Data", "ℹ️ About"])
 
-size = st.sidebar.slider("Size (sq ft)", 500, 5000, 1000)
-bhk = st.sidebar.slider("BHK", 1, 5, 2)
-rooms = st.sidebar.slider("Rooms", 1, 5, 2)
+# ============================
+# 🏠 TAB 1: PREDICTION
+# ============================
+with tab1:
 
-location_list = [col.replace("location_", "") for col in feature_columns if "location_" in col]
-area_type_list = [col.replace("area_type_", "") for col in feature_columns if "area_type_" in col]
+    st.sidebar.header("🔧 Input Parameters")
 
-selected_location = st.sidebar.selectbox("Location", location_list)
-selected_area = st.sidebar.selectbox("Area Type", area_type_list)
+    size = st.sidebar.slider("Size (sq ft)", 500, 5000, 1000)
+    bhk = st.sidebar.slider("BHK", 1, 5, 2)
+    rooms = st.sidebar.slider("Rooms", 1, 5, 2)
 
-# ----------------------------
-# PREDICTION
-# ----------------------------
-if st.button("Predict"):
-    input_data = pd.DataFrame(columns=feature_columns)
-    input_data.loc[0] = 0
+    location_list = [col.replace("location_", "") for col in feature_columns if "location_" in col]
+    area_type_list = [col.replace("area_type_", "") for col in feature_columns if "area_type_" in col]
 
-    input_data['size'] = size
-    input_data['bhk'] = bhk
-    input_data['rooms'] = rooms
-    input_data['bhk_per_size'] = bhk / size
-    input_data['total_space_per_room'] = size / rooms if rooms != 0 else 0
+    selected_location = st.sidebar.selectbox("Location", location_list)
+    selected_area = st.sidebar.selectbox("Area Type", area_type_list)
 
-    loc_col = f'location_{selected_location}'
-    if loc_col in input_data.columns:
-        input_data[loc_col] = 1
+    st.write(f"📊 Model Accuracy (R²): **{score:.2f}**")
 
-    area_col = f'area_type_{selected_area}'
-    if area_col in input_data.columns:
-        input_data[area_col] = 1
+    if st.button("Predict"):
 
-    prediction = model.predict(input_data)
+        input_data = pd.DataFrame(columns=feature_columns)
+        input_data.loc[0] = 0
 
-    # ----------------------------
-    # UI DISPLAY
-    # ----------------------------
-    st.subheader("💰 Predicted Price")
+        input_data['size'] = size
+        input_data['bhk'] = bhk
+        input_data['rooms'] = rooms
+        input_data['bhk_per_size'] = bhk / size
+        input_data['total_space_per_room'] = size / rooms if rooms != 0 else 0
 
-    lower = prediction[0] * 0.9
-    upper = prediction[0] * 1.1
+        loc_col = f'location_{selected_location}'
+        if loc_col in input_data.columns:
+            input_data[loc_col] = 1
 
-    if prediction[0] < 50:
-        category = "💸 Low"
-    elif prediction[0] < 150:
-        category = "🏠 Medium"
-    else:
-        category = "💎 High"
+        area_col = f'area_type_{selected_area}'
+        if area_col in input_data.columns:
+            input_data[area_col] = 1
 
-    col1, col2, col3 = st.columns(3)
+        with st.spinner("Predicting..."):
+            prediction = model.predict(input_data)
 
-    with col1:
-        st.metric("Price", f"₹ {prediction[0]:.2f} Lakhs")
+        # 🎯 DISPLAY
+        st.markdown("## 💰 Estimated Price")
+        st.markdown(
+            f"<h1 style='text-align:center;color:#00cc66;'>₹ {prediction[0]:.2f} Lakhs</h1>",
+            unsafe_allow_html=True
+        )
 
-    with col2:
-        st.metric("Range", f"{lower:.2f} - {upper:.2f}")
+        lower = prediction[0] * 0.9
+        upper = prediction[0] * 1.1
 
-    with col3:
-        st.metric("Category", category)
+        col1, col2, col3 = st.columns(3)
 
-    if prediction[0] > 150:
-        st.warning("⚠️ This property is relatively expensive")
-    elif prediction[0] < 50:
-        st.info("💡 This property is relatively affordable")
+        with col1:
+            st.metric("Price", f"{prediction[0]:.2f}")
 
-    st.markdown("---")
+        with col2:
+            st.metric("Range", f"{lower:.2f} - {upper:.2f}")
 
-    # ----------------------------
-    # SHAP
-    # ----------------------------
-    st.subheader("🧠 Why this price?")
+        with col3:
+            if prediction[0] < 75:
+                category = "💸 Affordable"
+            elif prediction[0] < 200:
+                category = "🏠 Mid-range"
+            else:
+                category = "💎 Premium"
 
-    explainer = shap.Explainer(model)
-    shap_values = explainer(input_data)
+            st.metric("Category", category)
 
-    shap_df = pd.DataFrame({
-        "Feature": input_data.columns,
-        "Impact": shap_values.values[0]
-    })
+        st.markdown("---")
 
-    shap_df["Feature"] = shap_df["Feature"].str.replace("location_", "Location: ")
-    shap_df["Feature"] = shap_df["Feature"].str.replace("area_type_", "Area: ")
+        # ============================
+        # 🧠 SHAP
+        # ============================
+        st.subheader("🧠 Why this price?")
 
-    shap_df = shap_df.sort_values(by="Impact", key=abs, ascending=False).reset_index(drop=True)
+        shap_values = explainer(input_data)
 
-    # Key factors
-    st.markdown("### 🔍 Key Factors")
+        shap_df = pd.DataFrame({
+            "Feature": input_data.columns,
+            "Impact": shap_values.values[0]
+        })
 
-    for _, row in shap_df.head(3).iterrows():
-        if row["Impact"] > 0:
-            st.markdown(f"🟢 **{row['Feature']} increased price** (+{row['Impact']:.2f})")
-        else:
-            st.markdown(f"🔴 **{row['Feature']} decreased price** ({row['Impact']:.2f})")
+        shap_df["Feature"] = shap_df["Feature"].str.replace("location_", "Location: ")
+        shap_df["Feature"] = shap_df["Feature"].str.replace("area_type_", "Area: ")
 
-    # Table
-    st.markdown("### 📊 Detailed Impact")
-    st.dataframe(shap_df.head(8), hide_index=True, use_container_width=True)
-                        
-    # Chart
-    st.markdown("### 📈 Feature Impact")
-    st.bar_chart(shap_df.head(8).set_index("Feature")["Impact"])
+        shap_df = shap_df.sort_values(by="Impact", key=abs, ascending=False)
 
-# ----------------------------
-# DATA VIEW
-# ----------------------------
-with st.expander("📊 View Cleaned Dataset"):
-    st.write(df)
+        st.markdown("### 🔍 Top Influencing Factors")
 
-# ----------------------------
-# VISUALIZATION
-# ----------------------------
-st.subheader("📈 Price vs Size")
+        for _, row in shap_df.head(5).iterrows():
+            color = "green" if row["Impact"] > 0 else "red"
+            arrow = "⬆️" if row["Impact"] > 0 else "⬇️"
+
+            st.markdown(
+                f"{arrow} **{row['Feature']}** → <span style='color:{color}'>{row['Impact']:.2f}</span>",
+                unsafe_allow_html=True
+            )
+
+        st.markdown("### 📊 Feature Impact")
+        st.bar_chart(shap_df.head(8).set_index("Feature")["Impact"])
+        st.markdown("---")
+st.subheader("📂 Bulk Prediction (Upload CSV)")
+
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+
+if uploaded_file is not None:
+    try:
+        input_df = pd.read_csv(uploaded_file)
+
+        st.write("### 📊 Uploaded Data")
+        st.dataframe(input_df.head(), use_container_width=True)
+
+        # Preprocess input
+        input_df['bhk_per_size'] = input_df['bhk'] / input_df['size']
+        input_df['total_space_per_room'] = input_df['size'] / input_df['rooms']
+
+        # One-hot encoding alignment
+        input_encoded = pd.get_dummies(input_df)
+
+        # Align with training columns
+        input_encoded = input_encoded.reindex(columns=feature_columns, fill_value=0)
+
+        # Predict
+        predictions = model.predict(input_encoded)
+        input_df['Predicted Price'] = predictions
+
+        st.success("✅ Predictions completed!")
+
+        st.write("### 💰 Results")
+        st.dataframe(input_df, use_container_width=True)
+
+        # Download button
+        csv = input_df.to_csv(index=False).encode('utf-8')
+
+        st.download_button(
+            label="📥 Download Predictions",
+            data=csv,
+            file_name="predictions.csv",
+            mime="text/csv"
+        )
+
+    except Exception as e:
+        st.error(f"❌ Error: {e}")
+
+# ============================
+# 📊 TAB 2: DATA
+# ============================
+with tab2:
+    st.subheader("📊 Cleaned Dataset")
+    st.dataframe(df, use_container_width=True)
+
+    st.subheader("📈 Price vs Size")
+    sample_df = df[['size', 'price']].sample(500)
+    st.scatter_chart(sample_df.rename(columns={"size": "x", "price": "y"}))
+
+# ============================
+# ℹ️ TAB 3: ABOUT
+# ============================
+with tab3:
+    st.markdown("""
+    ## 📌 About This Project
+
+    This app predicts house prices using Machine Learning.
+
+    ### 🔧 Features:
+    - HistGradientBoostingRegressor model
+    - Feature engineering
+    - SHAP explainability
+    - Interactive UI
+
+    ### 📊 Inputs:
+    - Size
+    - BHK
+    - Rooms
+    - Location
+    - Area Type
+
+    Built using Streamlit 🚀
+    """)
