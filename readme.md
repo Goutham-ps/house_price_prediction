@@ -1,6 +1,6 @@
-# 🏠 House Price Prediction App
+# 🏠 AI House Price Prediction & Recommendation App
 
-An AI-powered web application that predicts house prices based on user inputs using Machine Learning.
+An AI-powered web application that not only predicts house prices but also **recommends properties, visualizes market trends, and provides location-based insights**.
 
 ---
 
@@ -13,11 +13,52 @@ An AI-powered web application that predicts house prices based on user inputs us
 ## 🧠 Features
 
 * 📊 Predict house prices instantly
-* 📂 Bulk prediction using CSV upload
+* 🏠 Smart property recommendation system
 * 🧠 Explainable AI using SHAP
-* 📈 Data visualization
+* 🗺️ Interactive Bangalore price map
+* 📈 Data visualization & insights dashboard
 * 🎯 Accuracy score (R²)
 * 💡 Price category (Affordable / Mid-range / Premium)
+* 🔍 Advanced filters (Location, Price, BHK)
+* 📍 Location-based analysis
+* 📂 Bulk prediction using CSV upload
+
+---
+
+## 🏠 Recommendation System
+
+* Suggests similar properties based on:
+
+  * Size
+  * BHK
+  * Rooms
+* Location-aware recommendations
+* Displays top matching properties with key details
+
+---
+
+## 🗺️ Map Features
+
+* 📍 Visualizes properties across Bangalore
+* 🎨 Color-coded pricing (Affordable → Premium)
+* 📏 Dynamic marker size based on price
+* 🧭 Smart zoom based on selected location
+* 🖱️ Hover tooltips with formatted price
+* 🎛️ Filters:
+
+  * Location
+  * Price range
+  * BHK
+
+---
+
+## 📊 Dashboard Insights
+
+* 📈 Average price per location
+* 📊 Maximum price
+* 🏘️ Number of listings
+* 📍 Compare locations
+* 🔍 Real-time filtering
 
 ---
 
@@ -28,19 +69,26 @@ An AI-powered web application that predicts house prices based on user inputs us
 * Scikit-learn
 * SHAP
 * Pandas / NumPy
+* PyDeck (Map Visualization)
+* Joblib
 
 ---
 
 ## 📊 Model Details
 
-* Model: HistGradientBoostingRegressor
-* Features:
+* Model: `HistGradientBoostingRegressor`
 
-  * Size
-  * BHK
-  * Rooms
-  * Location
-  * Area Type
+### Features Used:
+
+* Size
+* BHK
+* Rooms
+* Location
+* Area Type
+* Engineered Features:
+
+  * bhk_per_size
+  * total_space_per_room
 
 ---
 
@@ -59,7 +107,7 @@ streamlit run app.py
 
 ```csv
 size,bhk,rooms,location,area_type
-1200,2,2,Chennai,Super built-up Area
+1200,2,2,Bangalore,Super built-up Area
 1500,3,3,Bangalore,Built-up Area
 ```
 
@@ -67,10 +115,11 @@ size,bhk,rooms,location,area_type
 
 ## 📌 Future Improvements
 
-* Map-based visualization
-* Model comparison (XGBoost, Random Forest)
-* User authentication
-* Real-time data integration
+* 🤖 Advanced ML recommender (KNN / cosine similarity)
+* 🌐 Real-time property data (API integration)
+* 📱 Mobile UI optimization
+* 🔐 User authentication
+* 📊 Model comparison (XGBoost, Random Forest)
 
 ---
 
