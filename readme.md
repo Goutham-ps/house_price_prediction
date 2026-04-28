@@ -94,11 +94,31 @@ An AI-powered web application that not only predicts house prices but also **rec
 
 ## 📂 How to Run Locally
 
+### 1️⃣ Clone the Repository
+
 ```bash
-🔗 GitHub Repository: https://github.com/goutham-ps/house-price-prediction
+git clone https://github.com/goutham-ps/house-price-prediction.git
+cd house-price-prediction
+```
+
+### 2️⃣ Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
+
+### 3️⃣ Run the Application
+
+```bash
 streamlit run app.py
 ```
+
+---
+
+## 🔗 GitHub Repository
+
+https://github.com/goutham-ps/house-price-prediction
+
 
 ---
 
