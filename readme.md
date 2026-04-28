@@ -95,8 +95,7 @@ An AI-powered web application that not only predicts house prices but also **rec
 ## 📂 How to Run Locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+🔗 GitHub Repository: https://github.com/goutham-ps/house-price-prediction
 pip install -r requirements.txt
 streamlit run app.py
 ```
